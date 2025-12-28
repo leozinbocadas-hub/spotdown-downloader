@@ -4,17 +4,16 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
-  // No servidor, priorizamos chaves SEM o prefixo NEXT_PUBLIC_ para evitar que o Next.js "grave" os placeholders
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
-    console.error('[SUPABASE] Erro: URL não configurada ou é um placeholder!');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase credentials are missing! Check your environment variables.');
   }
 
   return createServerClient(
-    supabaseUrl!,
-    supabaseAnonKey!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -27,8 +26,6 @@ export async function createClient() {
             )
           } catch {
             // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
       },
