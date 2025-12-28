@@ -38,6 +38,7 @@ interface Task {
   total_tracks: number;
   tracks_downloaded: number;
   zip_file_url?: string;
+  error_message?: string | null;
   created_at: string;
 }
 
