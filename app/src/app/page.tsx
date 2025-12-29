@@ -107,7 +107,7 @@ export default function App() {
   // Expiration Timer Effect
   useEffect(() => {
     if (activeTask?.status === 'completed' && activeTask.zip_file_url) {
-      setTimeLeft(60);
+      setTimeLeft(120);
       const timer = setInterval(() => {
         setTimeLeft((prev) => (prev !== null && prev > 0) ? prev - 1 : 0);
       }, 1000);
@@ -343,7 +343,7 @@ export default function App() {
             <div className="grid grid-cols-1 gap-2">
               <h3 className="text-xs font-black text-gray-600 uppercase tracking-[0.3em] px-4 mb-2">Músicas da Playlist</h3>
               {tracks.map((track, i) => (
-                <div key={track.spotify_track_id} className="group flex items-center justify-between p-4 rounded-3xl bg-[#121212]/50 border border-transparent hover:border-white/5 hover:bg-white/[0.03] transition-all">
+                <div key={`${track.spotify_track_id}-${i}`} className="group flex items-center justify-between p-4 rounded-3xl bg-[#121212]/50 border border-transparent hover:border-white/5 hover:bg-white/[0.03] transition-all">
                   <div className="flex items-center gap-6">
                     <span className="w-6 text-sm font-bold text-gray-700">{i + 1}</span>
                     <div className="w-14 h-14 rounded-xl bg-gray-900 overflow-hidden border border-white/10 shrink-0 relative">

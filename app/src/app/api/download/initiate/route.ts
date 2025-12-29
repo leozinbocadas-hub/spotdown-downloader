@@ -23,15 +23,20 @@ export async function POST(request: Request) {
         // 1. Criar tarefa (anonimizada se não houver usuário)
         const { data: { user } } = await supabase.auth.getUser();
 
+        const insertData: any = {
+            spotify_playlist_url: spotifyPlaylistUrl,
+            playlist_name: playlistName,
+            total_tracks: tracks.length,
+            status: 'pending',
+        };
+
+        if (user) {
+            insertData.user_id = user.id;
+        }
+
         const { data: task, error: taskError } = await supabase
             .from('download_tasks')
-            .insert({
-                user_id: user?.id || null,
-                spotify_playlist_url: spotifyPlaylistUrl,
-                playlist_name: playlistName,
-                total_tracks: tracks.length,
-                status: 'pending',
-            })
+            .insert(insertData)
             .select()
             .single();
 

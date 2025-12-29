@@ -25,7 +25,7 @@ const r2 = new S3Client({
     },
 });
 
-const CONCURRENT_DOWNLOADS_LIMIT = 10;
+const CONCURRENT_DOWNLOADS_LIMIT = 3;
 const downloadLimiter = pLimit(CONCURRENT_DOWNLOADS_LIMIT);
 
 // Garantir que a pasta tmp existe
@@ -48,38 +48,59 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
     let errorMessage = null;
 
     try {
-        console.log(`[WORKER] Iniciando (spotDL): ${title} - ${artist}`);
+        // Limpeza que remove apenas caracteres de sistema, preservando letras de qualquer idioma e acentos
+        const cleanTitle = title.replace(/\(.*\)|\[.*\]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+        const firstArtist = artist.split(',')[0].replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+        const searchQuery = `${cleanTitle} ${firstArtist}`;
 
+        console.log(`[WORKER] Iniciando busca: ${title} - ${artist}`);
+        console.log(`[WORKER] Query refinada: ${searchQuery}`);
+
+        // Verificar cookies
         let cookiesFlag = '';
-        const cookiesContent = process.env.YT_COOKIES;
-        const cookiesPath = path.join(taskDir, 'cookies.txt');
+        const rootCookiesPath = path.join(__dirname, 'cookies.txt');
+        try {
+            await fs.access(rootCookiesPath);
+            cookiesFlag = `--cookies "${rootCookiesPath}"`;
+        } catch (e) { }
 
-        if (cookiesContent) {
-            await fs.writeFile(cookiesPath, cookiesContent);
-            // No spotDL a flag de cookies é diferente
-            cookiesFlag = `--cookie-file "${cookiesPath}"`;
+        // --- TENTATIVA 1: SOUNDCLOUD ---
+        console.log(`[WORKER] [SOUNDCLOUD] Buscando: ${searchQuery}`);
+        const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch1:${searchQuery}"`;
+
+        try {
+            await new Promise((resolve, reject) => {
+                exec(scCommand, (error, stdout, stderr) => {
+                    if (error) reject(error);
+                    else resolve(stdout);
+                });
+            });
+        } catch (scError) {
+            console.warn(`[WORKER] SoundCloud retornou erro para "${title}".`);
         }
 
-        // spotDL é muito mais resiliente que o yt-dlp puro
-        // Ele busca no YouTube Music e outros, e já coloca os metadados
-        const spotifyUrl = `https://open.spotify.com/track/${spotify_track_id}`;
-        const spotdlCommand = `spotdl download "${spotifyUrl}" --format mp3 --output "${downloadedFilePath}" ${cookiesFlag} --no-cache`;
+        // Checar se o arquivo foi baixado pelo SoundCloud
+        const hasScFile = await fs.stat(downloadedFilePath).catch(() => null);
 
-        await new Promise((resolve, reject) => {
-            exec(spotdlCommand, async (error, stdout, stderr) => {
-                // Deletar o arquivo de cookies temporário por segurança
-                if (cookiesContent) await fs.unlink(cookiesPath).catch(() => null);
+        if (!hasScFile) {
+            console.warn(`[WORKER] SoundCloud não encontrou "${title}". Tentando YouTube como fallback...`);
 
-                if (error) {
-                    console.error(`[SPOTDL ERROR] ${stderr}`);
-                    return reject(new Error(`Falha no spotDL: ${stderr}`));
-                }
-                resolve(stdout);
+            // --- TENTATIVA 2: YOUTUBE ---
+            // Usamos uma busca um pouco mais ampla se a específica falhar
+            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist --match-filter "!is_live & !is_upcoming" --add-header "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch1:${searchQuery}"`;
+
+            await new Promise((resolve, reject) => {
+                exec(ytDlpCommand, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`[WORKER] YouTube Erro para "${title}": ${stderr.slice(0, 100)}`);
+                        reject(new Error(`Falha total: Nenhuma fonte encontrou a música.`));
+                    } else resolve(stdout);
+                });
             });
-        });
+        }
 
         if (!await fs.stat(downloadedFilePath).catch(() => null)) {
-            throw new Error('Arquivo MP3 não foi gerado.');
+            throw new Error('Arquivo MP3 não foi gerado em nenhuma das fontes.');
         }
 
         // Tagging
@@ -131,8 +152,8 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         console.error(`[WORKER ERROR] ${title}:`, error.message);
         errorMessage = error.message;
     } finally {
-        // Deletar o arquivo local após o upload
-        await fs.unlink(downloadedFilePath).catch(() => { });
+        // O arquivo será deletado no cleanup final da tarefa para economizar largura de banda no ZIP
+        // await fs.unlink(downloadedFilePath).catch(() => { });
     }
 
     return { downloadUrl, errorMessage };
@@ -265,11 +286,11 @@ async function processDownloadTask(job) {
 
             for (const t of successfulTracks) {
                 try {
-                    const res = await axios.get(t.download_url, { responseType: 'stream', timeout: 10000 });
+                    const localPath = path.join(__dirname, 'tmp', downloadTaskId, `${t.spotify_track_id}.mp3`);
                     const fileName = `${t.track_number}-${t.title.replace(/[^\w\s-]/gi, '')}.mp3`;
-                    archive.append(res.data, { name: fileName });
+                    archive.file(localPath, { name: fileName });
                 } catch (e) {
-                    console.error(`[WORKER] Erro ao incluir track no ZIP: ${t.title}`);
+                    console.error(`[WORKER] Erro ao incluir track no ZIP (local): ${t.title}`);
                 }
             }
 
