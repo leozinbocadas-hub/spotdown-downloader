@@ -25,8 +25,12 @@ const r2 = new S3Client({
     },
 });
 
-const CONCURRENT_DOWNLOADS_LIMIT = 3;
+const CONCURRENT_DOWNLOADS_LIMIT = 10; // Limite global de tracks sendo baixadas simultaneamente
 const downloadLimiter = pLimit(CONCURRENT_DOWNLOADS_LIMIT);
+
+const CONCURRENT_JOBS_LIMIT = 5; // Limite de playlists sendo processadas simultaneamente
+const jobLimiter = pLimit(CONCURRENT_JOBS_LIMIT);
+const activeJobIds = new Set();
 
 // Garantir que a pasta tmp existe
 (async () => {
@@ -492,7 +496,20 @@ async function startWorker() {
 
         if (allJobs.length > 0) {
             for (const job of allJobs) {
-                await processDownloadTask(job);
+                if (activeJobIds.has(job.id)) continue;
+
+                activeJobIds.add(job.id);
+                console.log(`[WORKER] Adicionando Job à fila de execução: ${job.id}`);
+
+                jobLimiter(async () => {
+                    try {
+                        await processDownloadTask(job);
+                    } catch (err) {
+                        console.error(`[WORKER] Erro ao processar job ${job.id}:`, err);
+                    } finally {
+                        activeJobIds.delete(job.id);
+                    }
+                });
             }
         }
         setTimeout(pollJobs, 5000);

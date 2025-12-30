@@ -352,7 +352,14 @@ export default function App() {
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{s.label}</p>
                       {s.isBadge ? (
                         <Badge className="bg-[#1DB954]/10 text-[#1DB954] border-none font-bold uppercase text-[10px] px-3 py-1">
-                          {s.val}
+                          {s.val === 'PENDING' ? 'NA FILA' :
+                            s.val === 'PROCESSING' ? 'PROCESSANDO' :
+                              s.val === 'FETCHING_METADATA' ? 'BUSCANDO DADOS' :
+                                s.val === 'DOWNLOADING' ? 'BAIXANDO' :
+                                  s.val === 'ZIPPING' ? 'COMPACTANDO' :
+                                    s.val === 'COMPLETED' ? 'CONCLUÍDO' :
+                                      s.val === 'FAILED' ? 'FALHOU' :
+                                        s.val === 'EXPIRED' ? 'EXPIRADO' : s.val}
                         </Badge>
                       ) : (
                         <p className={`text-2xl font-black ${s.color || 'text-white'}`}>{s.val}</p>
@@ -400,7 +407,9 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="text-gray-600 italic text-xs font-black uppercase tracking-widest animate-pulse">
-                        {track.status}...
+                        {track.status === 'pending' ? 'na fila' :
+                          track.status === 'downloading' ? 'baixando' :
+                            track.status === 'zipping' ? 'compactando' : track.status}...
                       </div>
                     )}
 
