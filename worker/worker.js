@@ -51,6 +51,7 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
     let downloadUrl = null;
     let errorMessage = null;
 
+    // --- INÍCIO DA LÓGICA DE DOWNLOAD ---
     try {
         // 1. Limpeza inteligente e preparação de queries
         const cleanTitle = title.replace(/["']/g, '');
@@ -67,13 +68,14 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         const minDur = Math.max(0, expectedSeconds - margin);
         const maxDur = expectedSeconds + margin;
 
-        // Filtro Anti-Cover/Karaoke
+        // Filtro Anti-Cover/Karaoke (Sintaxe correta para yt-dlp)
         let avoidFilter = '';
         if (!cleanTitle.toLowerCase().includes('cover') && !cleanTitle.toLowerCase().includes('karaoke')) {
-            avoidFilter = ' & title !~* "cover" & title !~* "karaoke"';
+            // !title ~= "(?i)cover" significa: NÃO contém "cover" (case-insensitive)
+            avoidFilter = ' & !title ~= "(?i)cover" & !title ~= "(?i)karaoke"';
         }
 
-        const durationFilter = `--match-filter "duration > ${minDur} & duration < ${maxDur}${avoidFilter}"`;
+        const durationFilter = `duration > ${minDur} & duration < ${maxDur}${avoidFilter}`;
 
         console.log(`[WORKER] Iniciando busca: ${title} - ${artist} (${expectedSeconds}s)`);
 
@@ -90,7 +92,8 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         for (const query of queries) {
             if (hasFile) break;
             console.log(`[WORKER] [SOUNDCLOUD] Tentando: ${query}`);
-            const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch15:${query}"`;
+            // Usamos aspas simples no --match-filter para não conflitar com as aspas duplas do regex
+            const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist --match-filter '${durationFilter}' --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch15:${query}"`;
 
             try {
                 await new Promise((resolve, reject) => {
@@ -111,7 +114,7 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         // --- TENTATIVA 2: YOUTUBE (BYPASS DE DISPOSITIVO MÓVEL) ---
         if (!hasFile) {
             console.warn(`[WORKER] [YOUTUBE] SoundCloud falhou. Usando YouTube com bypass avançado...`);
-            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=mweb,ios,android_web" --add-header "Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7" --add-header "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch3:${queries[0]}"`;
+            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist --match-filter '${durationFilter}' --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=mweb,ios,android_web" --add-header "Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7" --add-header "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch3:${queries[0]}"`;
 
             try {
                 await new Promise((resolve, reject) => {
