@@ -170,75 +170,75 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         // await fs.unlink(downloadedFilePath).catch(() => { });
     }
 
-    async function deleteR2Folder(prefix) {
-        try {
-            const listParams = {
-                Bucket: process.env.R2_BUCKET_NAME,
-                Prefix: prefix
-            };
-            const listedObjects = await r2.send(new ListObjectsV2Command(listParams));
-
-            if (!listedObjects.Contents || listedObjects.Contents.length === 0) return;
-
-            const deleteParams = {
-                Bucket: process.env.R2_BUCKET_NAME,
-                Delete: { Objects: [] }
-            };
-
-            listedObjects.Contents.forEach(({ Key }) => {
-                deleteParams.Delete.Objects.push({ Key });
-            });
-
-            await r2.send(new DeleteObjectsCommand(deleteParams));
-
-            if (listedObjects.IsTruncated) {
-                await deleteR2Folder(prefix);
-            }
-            console.log(`[WORKER] Pasta R2 removida: ${prefix}`);
-        } catch (e) {
-            console.error(`[WORKER] Erro ao deletar prefixo ${prefix} no R2:`, e.message);
-        }
-    }
-
-    async function cleanupExpiredTasks() {
-        console.log('[WORKER] Iniciando faxina de arquivos expirados no R2...');
-        try {
-            // 15 minutos de expiração (garante tempo para o usuário baixar)
-            const expirationTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-
-            // Buscar tarefas que já deveriam ter sido limpas mas não foram (por queda do worker, etc)
-            const { data: tasksToCleanup } = await supabase
-                .from('download_tasks')
-                .select('id, status')
-                .in('status', ['completed', 'failed'])
-                .lt('updated_at', expirationTime);
-
-            if (tasksToCleanup && tasksToCleanup.length > 0) {
-                console.log(`[WORKER] Encontradas ${tasksToCleanup.length} tarefas pendentes de limpeza.`);
-                for (const task of tasksToCleanup) {
-                    console.log(`[WORKER] [CLEANUP] Limpando arquivos da tarefa: ${task.id}`);
-
-                    // Deletar ZIP
-                    await r2.send(new DeleteObjectCommand({
-                        Bucket: process.env.R2_BUCKET_NAME,
-                        Key: `${task.id}.zip`
-                    })).catch(() => { });
-
-                    // Deletar folder de tracks INTEIRO
-                    await deleteR2Folder(`tracks/${task.id}/`);
-
-                    // Marcar como expirado no banco
-                    await supabase.from('download_tasks')
-                        .update({ status: 'expired', updated_at: new Date().toISOString() })
-                        .eq('id', task.id);
-                }
-            }
-        } catch (e) {
-            console.error('[WORKER] Erro durante limpeza global:', e.message);
-        }
-    }
-
     return { downloadUrl, errorMessage };
+}
+
+async function deleteR2Folder(prefix) {
+    try {
+        const listParams = {
+            Bucket: process.env.R2_BUCKET_NAME,
+            Prefix: prefix
+        };
+        const listedObjects = await r2.send(new ListObjectsV2Command(listParams));
+
+        if (!listedObjects.Contents || listedObjects.Contents.length === 0) return;
+
+        const deleteParams = {
+            Bucket: process.env.R2_BUCKET_NAME,
+            Delete: { Objects: [] }
+        };
+
+        listedObjects.Contents.forEach(({ Key }) => {
+            deleteParams.Delete.Objects.push({ Key });
+        });
+
+        await r2.send(new DeleteObjectsCommand(deleteParams));
+
+        if (listedObjects.IsTruncated) {
+            await deleteR2Folder(prefix);
+        }
+        console.log(`[WORKER] Pasta R2 removida: ${prefix}`);
+    } catch (e) {
+        console.error(`[WORKER] Erro ao deletar prefixo ${prefix} no R2:`, e.message);
+    }
+}
+
+async function cleanupExpiredTasks() {
+    console.log('[WORKER] Iniciando faxina de arquivos expirados no R2...');
+    try {
+        // 15 minutos de expiração (garante tempo para o usuário baixar)
+        const expirationTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+        // Buscar tarefas que já deveriam ter sido limpas mas não foram (por queda do worker, etc)
+        const { data: tasksToCleanup } = await supabase
+            .from('download_tasks')
+            .select('id, status')
+            .in('status', ['completed', 'failed'])
+            .lt('updated_at', expirationTime);
+
+        if (tasksToCleanup && tasksToCleanup.length > 0) {
+            console.log(`[WORKER] Encontradas ${tasksToCleanup.length} tarefas pendentes de limpeza.`);
+            for (const task of tasksToCleanup) {
+                console.log(`[WORKER] [CLEANUP] Limpando arquivos da tarefa: ${task.id}`);
+
+                // Deletar ZIP
+                await r2.send(new DeleteObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: `${task.id}.zip`
+                })).catch(() => { });
+
+                // Deletar folder de tracks INTEIRO
+                await deleteR2Folder(`tracks/${task.id}/`);
+
+                // Marcar como expirado no banco
+                await supabase.from('download_tasks')
+                    .update({ status: 'expired', updated_at: new Date().toISOString() })
+                    .eq('id', task.id);
+            }
+        }
+    } catch (e) {
+        console.error('[WORKER] Erro durante limpeza global:', e.message);
+    }
 }
 
 async function getSystemSpotifyAccessToken() {
