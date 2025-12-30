@@ -80,29 +80,31 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
 
         // --- TENTATIVA 1: SOUNDCLOUD (SPECIFIC) ---
         console.log(`[WORKER] [SOUNDCLOUD] Buscando específico: ${specificQuery}`);
-        const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch5:${specificQuery}"`;
+        const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${specificQuery}"`;
         try {
             await new Promise((resolve, reject) => {
-                let timeout = setTimeout(() => { process.kill(); reject(new Error('Timeout SC')); }, 60000);
-                const process = exec(scCommand, (error) => {
-                    clearTimeout(timeout);
+                let timeout;
+                const childProcess = exec(scCommand, (error) => {
+                    if (timeout) clearTimeout(timeout);
                     if (error) reject(error);
                     else resolve();
                 });
+                timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC')); }, 60000);
             });
         } catch (e) {
             // broad
             if (!await fs.stat(downloadedFilePath).catch(() => null)) {
                 console.log(`[WORKER] [SOUNDCLOUD] Buscando amplo: ${broadQuery}`);
-                const scBroad = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch5:${broadQuery}"`;
+                const scBroad = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${broadQuery}"`;
                 try {
                     await new Promise((resolve, reject) => {
-                        let timeout = setTimeout(() => { process.kill(); reject(new Error('Timeout SC Broad')); }, 60000);
-                        const process = exec(scBroad, (err) => {
-                            clearTimeout(timeout);
+                        let timeout;
+                        const childProcess = exec(scBroad, (err) => {
+                            if (timeout) clearTimeout(timeout);
                             if (err) reject(err);
                             else resolve();
                         });
+                        timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC Broad')); }, 60000);
                     });
                 } catch (e2) { }
             }
@@ -113,15 +115,16 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         // --- TENTATIVA 2: VIMEO ---
         if (!hasFile) {
             console.log(`[WORKER] [VIMEO] Buscando: ${specificQuery}`);
-            const vimeoCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "vsearch3:${specificQuery}"`;
+            const vimeoCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "vsearch5:${specificQuery}"`;
             try {
                 await new Promise((resolve, reject) => {
-                    let timeout = setTimeout(() => { process.kill(); reject(new Error('Timeout Vimeo')); }, 60000);
-                    const process = exec(vimeoCommand, (error) => {
-                        clearTimeout(timeout);
+                    let timeout;
+                    const childProcess = exec(vimeoCommand, (error) => {
+                        if (timeout) clearTimeout(timeout);
                         if (error) reject(error);
                         else resolve();
                     });
+                    timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout Vimeo')); }, 60000);
                 });
                 hasFile = await fs.stat(downloadedFilePath).catch(() => null);
             } catch (e) { }
@@ -130,14 +133,15 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         // --- TENTATIVA 3: YOUTUBE ---
         if (!hasFile) {
             console.warn(`[WORKER] SoundCloud/Vimeo falharam. Usando YouTube com clientes iOS/Web...`);
-            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=ios,web_embedded" --add-header "User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch3:${specificQuery}"`;
+            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=ios,web_embedded" --add-header "User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch5:${specificQuery}"`;
             await new Promise((resolve, reject) => {
-                let timeout = setTimeout(() => { process.kill(); reject(new Error('Timeout YouTube')); }, 90000);
-                const process = exec(ytDlpCommand, (error) => {
-                    clearTimeout(timeout);
+                let timeout;
+                const childProcess = exec(ytDlpCommand, (error) => {
+                    if (timeout) clearTimeout(timeout);
                     if (error) reject(error);
                     else resolve();
                 });
+                timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout YouTube')); }, 90000);
             });
             hasFile = await fs.stat(downloadedFilePath).catch(() => null);
         }
