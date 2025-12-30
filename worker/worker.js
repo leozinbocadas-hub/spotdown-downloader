@@ -78,41 +78,77 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
             cookiesFlag = `--cookies "${rootCookiesPath}"`;
         } catch (e) { }
 
-        // --- TENTATIVA 1: SOUNDCLOUD (SPECIFIC) ---
-        console.log(`[WORKER] [SOUNDCLOUD] Buscando específico: ${specificQuery}`);
-        const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${specificQuery}"`;
-        try {
-            await new Promise((resolve, reject) => {
-                let timeout;
-                const childProcess = exec(scCommand, (error) => {
-                    if (timeout) clearTimeout(timeout);
-                    if (error) reject(error);
-                    else resolve();
-                });
-                timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC')); }, 60000);
-            });
-        } catch (e) {
-            // broad
-            if (!await fs.stat(downloadedFilePath).catch(() => null)) {
-                console.log(`[WORKER] [SOUNDCLOUD] Buscando amplo: ${broadQuery}`);
-                const scBroad = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${broadQuery}"`;
-                try {
+        // --- TENTATIVA 1: DEEZER (POOL DE TOKENS) ---
+        if (process.env.DEEZER_ARL) {
+            const arlPool = process.env.DEEZER_ARL.split(',').map(t => t.trim()).filter(t => t);
+            const randomArl = arlPool[Math.floor(Math.random() * arlPool.length)];
+
+            console.log(`[WORKER] [DEEZER] Buscando (Usando 1 de ${arlPool.length} tokens): ${specificQuery}`);
+            try {
+                const dzSearchUrl = `https://api.deezer.com/search?q=track:"${cleanTitle}" artist:"${cleanArtists}"`;
+                const dzResponse = await axios.get(dzSearchUrl, { timeout: 5000 });
+                const dzTrack = dzResponse.data.data?.find(t =>
+                    Math.abs(t.duration - expectedSeconds) < 15
+                );
+
+                if (dzTrack) {
+                    console.log(`[WORKER] [DEEZER] Match: ${dzTrack.title} (${dzTrack.duration}s). Baixando...`);
+                    const dzCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --add-header "Cookie:arl=${randomArl}" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "${dzTrack.link}"`;
+
                     await new Promise((resolve, reject) => {
                         let timeout;
-                        const childProcess = exec(scBroad, (err) => {
+                        const childProcess = exec(dzCommand, (error) => {
                             if (timeout) clearTimeout(timeout);
-                            if (err) reject(err);
+                            if (error) reject(error);
                             else resolve();
                         });
-                        timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC Broad')); }, 60000);
+                        timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout Deezer')); }, 60000);
                     });
-                } catch (e2) { }
+                }
+            } catch (e) {
+                console.warn(`[WORKER] [DEEZER] Falhou: ${e.message}`);
             }
         }
 
         let hasFile = await fs.stat(downloadedFilePath).catch(() => null);
 
-        // --- TENTATIVA 2: VIMEO ---
+        // --- TENTATIVA 2: SOUNDCLOUD (SPECIFIC) ---
+        if (!hasFile) {
+            console.log(`[WORKER] [SOUNDCLOUD] Buscando específico: ${specificQuery}`);
+            const scCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${specificQuery}"`;
+            try {
+                await new Promise((resolve, reject) => {
+                    let timeout;
+                    const childProcess = exec(scCommand, (error) => {
+                        if (timeout) clearTimeout(timeout);
+                        if (error) reject(error);
+                        else resolve();
+                    });
+                    timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC')); }, 60000);
+                });
+                hasFile = await fs.stat(downloadedFilePath).catch(() => null);
+            } catch (e) {
+                // broad
+                if (!await fs.stat(downloadedFilePath).catch(() => null)) {
+                    console.log(`[WORKER] [SOUNDCLOUD] Buscando amplo: ${broadQuery}`);
+                    const scBroad = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "scsearch10:${broadQuery}"`;
+                    try {
+                        await new Promise((resolve, reject) => {
+                            let timeout;
+                            const childProcess = exec(scBroad, (err) => {
+                                if (timeout) clearTimeout(timeout);
+                                if (err) reject(err);
+                                else resolve();
+                            });
+                            timeout = setTimeout(() => { childProcess.kill(); reject(new Error('Timeout SC Broad')); }, 60000);
+                        });
+                        hasFile = await fs.stat(downloadedFilePath).catch(() => null);
+                    } catch (e2) { }
+                }
+            }
+        }
+
+        // --- TENTATIVA 3: VIMEO ---
         if (!hasFile) {
             console.log(`[WORKER] [VIMEO] Buscando: ${specificQuery}`);
             const vimeoCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "vsearch5:${specificQuery}"`;
@@ -130,9 +166,9 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
             } catch (e) { }
         }
 
-        // --- TENTATIVA 3: YOUTUBE ---
+        // --- TENTATIVA 4: YOUTUBE ---
         if (!hasFile) {
-            console.warn(`[WORKER] SoundCloud/Vimeo falharam. Usando YouTube com clientes iOS/Web...`);
+            console.warn(`[WORKER] Outras fontes falharam. Usando YouTube com bypass...`);
             const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=ios,web_embedded" --add-header "User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch5:${specificQuery}"`;
             await new Promise((resolve, reject) => {
                 let timeout;
