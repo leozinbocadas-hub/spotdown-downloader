@@ -54,14 +54,15 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
     try {
         // Limpeza que remove apenas caracteres de sistema, preservando letras de qualquer idioma e acentos
         const cleanTitle = title.replace(/\(.*\)|\[.*\]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
-        // Usar todos os artistas para ser mais específico e evitar resultados genéricos
-        const cleanArtists = artist.replace(/[^\p{L}\p{N}\s,]/gu, ' ').replace(/\s+/g, ' ').trim();
+        // Limitar a busca aos 2 primeiros artistas para não confundir o algoritmo de busca
+        const artistList = artist.split(',').slice(0, 2).join(' ');
+        const cleanArtists = artistList.replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
         const searchQuery = `${cleanTitle} ${cleanArtists}`;
         const expectedSeconds = Math.floor(trackData.duration_ms / 1000);
 
-        // Janela de duração estrita: +/- 12 segundos para evitar remixes ou versões erradas
-        const minDur = Math.max(0, expectedSeconds - 12);
-        const maxDur = expectedSeconds + 12;
+        // Janela de duração mais flexível: +/- 20 segundos (para aceitar clipes com intro/outro)
+        const minDur = Math.max(0, expectedSeconds - 20);
+        const maxDur = expectedSeconds + 20;
         const durationFilter = `--match-filter "duration > ${minDur} & duration < ${maxDur}"`;
 
         console.log(`[WORKER] Iniciando busca: ${title} - ${artist} (Duração esperada: ${expectedSeconds}s)`);
@@ -94,7 +95,7 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
         // Checar se baixou
         let hasFile = await fs.stat(downloadedFilePath).catch(() => null);
 
-        // --- TENTATIVA 2: VIMEO (ROBUSTNESS) ---
+        // --- TENTATIVA 2: VIMEO ---
         if (!hasFile) {
             console.log(`[WORKER] [VIMEO] Buscando: ${searchQuery}`);
             const vimeoCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "vsearch3:${searchQuery}"`;
@@ -112,10 +113,11 @@ async function downloadAndTagTrack(trackData, downloadTaskId) {
             } catch (e) { }
         }
 
-        // --- TENTATIVA 3: YOUTUBE (FINAL FALLBACK) ---
+        // --- TENTATIVA 3: YOUTUBE (FALLBACK COM BYPASS) ---
         if (!hasFile) {
-            console.warn(`[WORKER] SoundCloud/Vimeo falharam. Usando YouTube como reserva...`);
-            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --add-header "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch3:${searchQuery}"`;
+            console.warn(`[WORKER] SoundCloud/Vimeo falharam. Usando YouTube com bypass de bot...`);
+            // Adicionado extractor-args para tentar burlar a detecção de bot do YouTube que apareceu nos logs
+            const ytDlpCommand = `yt-dlp --force-ipv4 -x --audio-format mp3 ${cookiesFlag} --ffmpeg-location "${ffmpegPath}" --no-check-certificates --geo-bypass --no-playlist ${durationFilter} --match-filter "!is_live & !is_upcoming" --extractor-args "youtube:player_client=android_web,web_embedded" --add-header "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" --extract-audio --audio-quality 0 -o "${downloadedFilePath}" "ytsearch3:${searchQuery}"`;
 
             try {
                 await new Promise((resolve, reject) => {
