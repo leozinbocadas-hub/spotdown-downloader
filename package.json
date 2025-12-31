@@ -1,0 +1,53 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "dist": "node protect.js && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.spotdown.desktop",
+    "productName": "SpotDown",
+    "icon": "assets/icons/icon.ico",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/ffmpeg-static/ffmpeg.exe",
+      "**/node_modules/yt-dlp-exec/bin/yt-dlp.exe"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "assets/icons/icon.ico",
+      "artifactName": "SpotDown.exe",
+      "publish": [
+        {
+          "provider": "github",
+          "owner": "leozinbocadas-hub",
+          "repo": "spotdown-downloader"
+        }
+      ]
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "SpotDown Desktop - Download Spotify Playlists to MP3",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "electron-updater": "^6.6.2",
+    "ffmpeg-static": "^5.3.0",
+    "node-id3": "^0.2.9",
+    "node-machine-id": "^1.1.12",
+    "p-limit": "^7.2.0",
+    "yt-dlp-exec": "^1.0.2"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-icon-builder": "^2.0.1",
+    "javascript-obfuscator": "^5.1.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.cache/
+.env
+package-lock.json
+*.log
+generator.html
+protect.js
+license.json

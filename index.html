@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpotDown Desktop</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="authContainer" class="auth-overlay" style="display: none;">
+        <div class="auth-card">
+            <img src="assets/logo.png" alt="Logo" class="auth-logo">
+            <h1>SpotDown</h1>
+            <p>Ative sua licença para continuar</p>
+            <div class="auth-input-group">
+                <input type="text" id="licenseKeyInput" placeholder="XXXX-XXXX-XXXX-XXXX">
+                <button id="activateBtn">Ativar Agora</button>
+            </div>
+            <div id="authStatus" class="auth-status"></div>
+            <p class="auth-help">Não tem um token? <a href="#">Comprar Licença</a></p>
+        </div>
+    </div>
+
+    <div class="app-container" id="mainApp" style="display: none;">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="assets/logo.png" alt="SpotDown Logo" class="logo-img">
+                <h1>SpotDown</h1>
+            </div>
+            <nav>
+                <div class="nav-item active">
+                    <i data-lucide="home"></i> Home
+                </div>
+                <div class="nav-item">
+                    <i data-lucide="list-music"></i> Playlist ATUAL
+                </div>
+                <div class="nav-item" id="settingsBtn">
+                    <i data-lucide="settings"></i> Configurações
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="license-info-card">
+                    <div class="license-header">
+                        <i data-lucide="shield-check"></i>
+                        <span id="licensePlanDisplay">Plano: ...</span>
+                    </div>
+                    <div class="license-details">
+                        <p>Ativado em: <span id="licenseActivatedAt">...</span></p>
+                        <p id="expiryContainer">Expira em: <span id="licenseExpiresAt">...</span></p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h2>Baixar Playlist</h2>
+            </div>
+
+            <section class="input-section">
+                <div class="input-card">
+                    <input type="text" id="playlistUrl" placeholder="Cole o link da playlist do Spotify aqui...">
+                    <button id="fetchBtn" class="primary-btn">
+                        <i data-lucide="search"></i> Buscar
+                    </button>
+                </div>
+                <div class="folder-selector">
+                    <i data-lucide="folder"></i>
+                    <span id="selectedPath">Salvar em: ...</span>
+                    <button id="changeFolderBtn" class="secondary-btn">Alterar</button>
+                </div>
+            </section>
+
+            <section class="tracks-section" id="tracksSection" style="display: none;">
+                <div class="section-header">
+                    <h3>Músicas Encontradas</h3>
+                    <button id="downloadAllBtn" class="download-all-btn">
+                        <i data-lucide="download"></i> Baixar Tudo
+                    </button>
+                </div>
+                <div class="tracks-list" id="tracksList">
+                    <!-- Tracks will be injected here -->
+                </div>
+            </section>
+
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <i data-lucide="music-4" size="64"></i>
+                </div>
+                <p>Cole um link de playlist para começar o download.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Configurações</h3>
+            <div class="settings-group">
+                <label>Formato de Saída</label>
+                <select id="outputFormat">
+                    <option value="mp3">MP3 (320kbps)</option>
+                    <option value="flac">FLAC (Lossless)</option>
+                </select>
+            </div>
+            <div class="settings-group">
+                <label>Busca Inteligente</label>
+                <div class="toggle-container">
+                    <span>Priorizar YouTube Official Audio</span>
+                    <input type="checkbox" id="prioritizeOfficial" checked>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="close-modal-btn">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    <script src="renderer.js"></script>
+</body>
+
+</html>
