@@ -347,8 +347,8 @@ body {
 }
 
 .cta-card .btn-primary {
-    background: black;
-    color: white;
+    background: #000000;
+    color: #ffffff !important;
 }
 
 .cta-card .btn-primary:hover {
