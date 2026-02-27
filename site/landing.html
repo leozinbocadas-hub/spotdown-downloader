@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpotDown Pro - Download Spotify em Alta Qualidade</title>
+    <link rel="icon" type="image/png" href="assets/logotipo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #1db954;
+            --primary-hover: #1ed760;
+            --bg: #000000;
+            --card-bg: #121212;
+            --text: #ffffff;
+            --text-dim: #b3b3b3;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Hero Background with Glow */
+        .hero-glow {
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(29, 185, 84, 0.15) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(80px);
+        }
+
+        .hero-glow-alt {
+            position: fixed;
+            bottom: -20%;
+            right: -10%;
+            width: 40%;
+            height: 40%;
+            background: radial-gradient(circle, rgba(29, 185, 84, 0.1) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(80px);
+        }
+
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(128, 128, 128, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(128, 128, 128, 0.3) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        header {
+            padding: 2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .logo img {
+            height: 32px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 5%;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        .badge {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            letter-spacing: -3px;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to bottom, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-dim);
+            max-width: 700px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Pricing Section */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .pricing-card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(29, 185, 84, 0.1);
+        }
+
+        .pricing-card.featured {
+            border-color: var(--primary);
+            background: linear-gradient(145deg, #121212 0%, #0a0a0a 100%);
+        }
+
+        .featured-badge {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: var(--primary);
+            color: #000;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .plan-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .price span {
+            font-size: 1rem;
+            color: var(--text-dim);
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        .currency {
+            font-size: 1.5rem;
+            margin-right: 4px;
+        }
+
+        .features {
+            list-style: none;
+            margin-bottom: 3rem;
+            flex-grow: 1;
+        }
+
+        .features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .features li i {
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .cta-button {
+            display: block;
+            width: 100%;
+            padding: 1.2rem;
+            text-align: center;
+            background: var(--primary);
+            color: #000;
+            text-decoration: none;
+            border-radius: 14px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+
+        .secondary-button {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+
+        .secondary-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        footer {
+            text-align: center;
+            padding: 4rem;
+            border-top: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 3rem;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-background {
+                background-size: 45px 45px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid-background"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-glow-alt"></div>
+
+    <header>
+        <div class="logo">
+            <img src="assets/logotipo.png" alt="SpotDown Logo">
+            SpotDown
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <img src="assets/logotipo.png" alt="SpotDown Pro" style="width: 120px; margin-bottom: 2rem;">
+            <div class="badge">REVOLUÇÃO NO DOWNLOAD</div>
+            <h1>Sua música.<br>Suas regras.</h1>
+            <p>Baixe suas playlists favoritas do Spotify com qualidade 320kbps, tags ID3 automáticas e capas de álbum
+                originais. Direto para o seu PC.</p>
+            <a href="https://github.com/leozinbocadas-hub/spotdown-downloader/releases/download/v1.0.1/SpotDown-Setup-1.0.1.exe"
+                class="cta-button"
+                style="max-width: 320px; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i data-lucide="download"></i> Instalar SpotDown v1.0.1
+            </a>
+        </section>
+
+        <section class="pricing-grid">
+            <!-- Plano Mensal -->
+            <div class="pricing-card">
+                <div class="plan-name">Mensal Pro</div>
+                <div class="price"><span class="currency">R$</span>37,90<span>/mês</span></div>
+                <ul class="features">
+                    <li><i data-lucide="check-circle-2"></i> Qualidade Premium 320kbps</li>
+                    <li><i data-lucide="check-circle-2"></i> Capas de Álbuns HD</li>
+                    <li><i data-lucide="check-circle-2"></i> Tags ID3 Automáticas</li>
+                    <li><i data-lucide="check-circle-2"></i> Downloads Ilimitados</li>
+                    <li><i data-lucide="check-circle-2"></i> Sem anúncios</li>
+                    <li><i data-lucide="check-circle-2"></i> Suporte Prioritário</li>
+                </ul>
+                <a href="https://pay.kirvano.com/18b0d261-7ce8-4cab-b8cd-89311f60ca4f"
+                    class="cta-button secondary-button">Assinar Agora</a>
+            </div>
+
+            <!-- Plano Trimestral -->
+            <div class="pricing-card featured">
+                <div class="featured-badge">Melhor Valor</div>
+                <div class="plan-name">Trimestral Pro Max</div>
+                <div class="price"><span class="currency">R$</span>67,90<span>/trimestre</span></div>
+                <ul class="features">
+                    <li><i data-lucide="check-circle-2"></i> Qualidade Premium 320kbps</li>
+                    <li><i data-lucide="check-circle-2"></i> Capas de Álbuns HD</li>
+                    <li><i data-lucide="check-circle-2"></i> Tags ID3 Automáticas</li>
+                    <li><i data-lucide="check-circle-2"></i> Downloads Ilimitados</li>
+                    <li><i data-lucide="check-circle-2"></i> Sem anúncios</li>
+                    <li><i data-lucide="check-circle-2"></i> Suporte Prioritário</li>
+                </ul>
+                <a href="https://pay.kirvano.com/b5fbc2fb-ff55-4e7d-abd3-5ca03518787d" class="cta-button">Assinar
+                    Agora</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 SpotDown Downloader. Não afiliado ao Spotify.</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
