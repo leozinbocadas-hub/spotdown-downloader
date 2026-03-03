@@ -272,6 +272,53 @@
             font-size: 0.9rem;
         }
 
+        .vsl-section {
+            margin-bottom: 5rem;
+            width: 100%;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 5%;
+        }
+
+        .video-wrapper {
+            width: 100%;
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transition: all 0.5s ease;
+        }
+
+        .video-wrapper:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 40px rgba(29, 185, 84, 0.2);
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 22px;
+        }
+
+        /* Plyr Customization to match Green Theme */
+        :root {
+            --plyr-color-main: #1db954;
+            --plyr-video-control-background-hover: rgba(29, 185, 84, 0.1);
+            --plyr-video-control-color: #fff;
+            --plyr-video-control-color-hover: #fff;
+        }
+
+        .plyr {
+            border-radius: 22px;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 3rem;
@@ -284,8 +331,14 @@
             .grid-background {
                 background-size: 45px 45px;
             }
+
+            .vsl-section {
+                padding: 0 5%;
+                margin-bottom: 3rem;
+            }
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 </head>
 
 <body>
@@ -312,6 +365,15 @@
                 style="max-width: 320px; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <i data-lucide="download"></i> Instalar SpotDown v1.0.1
             </a>
+        </section>
+
+        <section class="vsl-section">
+            <div class="video-wrapper">
+                <video id="player" playsinline controls data-poster="assets/logotipo.png">
+                    <source src="https://pub-a772dcccd942498d933354c58ab4ce29.r2.dev/vsl-novo/vsl-spotdown.mp4"
+                        type="video/mp4" />
+                </video>
+            </div>
         </section>
 
         <section class="pricing-grid">
@@ -354,8 +416,13 @@
         <p>&copy; 2026 SpotDown Downloader. Não afiliado ao Spotify.</p>
     </footer>
 
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <script>
         lucide.createIcons();
+        const player = new Plyr('#player', {
+            controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+            settings: ['quality', 'speed']
+        });
     </script>
 </body>
 
